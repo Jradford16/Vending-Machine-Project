@@ -1,0 +1,2 @@
+# Vending Machine Project
+This project is an Arduino-based vending machine system implemented using deterministic finite automata (DFAs) as the core control model. User inputs (item selection, monetary tokens, reset commands) are processed as a stream of symbols, which are fed into multiple DFAs operating in parallel. Each DFA is responsible for a distinct concern—such as item selection or payment validation—while a parent model coordinates their interaction and resolves system-level decisions like dispensing, waiting, or resetting.
