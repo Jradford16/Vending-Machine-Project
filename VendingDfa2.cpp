@@ -1,16 +1,20 @@
 #include "VendingDfa2.h"
+#include <Arduino.h>
 
 VendingDfa2::VendingDfa2(int (&modelPrices)[4])
-    : prices(modelPrices)   // bind to Model's array
+    : prices(modelPrices)
 {
-    currentState = DfaStates::Start;  
+    currentState = DfaStates::Start;
+    Serial.println(F("DFA2 initialized")); // DEBUG
 }
 
 TokenProgress VendingDfa2::ProgressState(Alphabet token) {
   
-  // If every single state has a transition with R, leading to an accept state, then at any input token of R:
-  // reset the current state and variables maintaining that current state.
+  Serial.print(F("DFA2 received token: ")); // DEBUG
+  Serial.println((int)token);               // DEBUG
+
   if (token == Alphabet::R) {
+    Serial.println(F("DFA2: Reset token received")); // DEBUG
     return TokenProgress::Reset;
   }
 
@@ -19,72 +23,83 @@ TokenProgress VendingDfa2::ProgressState(Alphabet token) {
 
       if (token == Alphabet::TWENTY_FIVE) {
 
-        // Accumulate value of inserted monetary tokens
         monetaryInput += 25;
-        return TokenProgress::Steady;
 
+        Serial.print(F("DFA2 monetary input += 25, total: ")); // DEBUG
+        Serial.println(monetaryInput);                         // DEBUG
+
+        return TokenProgress::Steady;
       }
 
       monetaryTokenLock = true;
+      Serial.println(F("DFA2 monetary token lock engaged")); // DEBUG
     }
 
     if (monetaryTokenLock) {
       switch (currentState) {
 
-        // Start state case, branch can either accept A or B. Only reachable when current state is Start. 
         case DfaStates::Start:
-          // A condition
+          Serial.println(F("DFA2 state: Start")); // DEBUG
+
           if (token == Alphabet::A) {
             currentState = DfaStates::A;
+            Serial.println(F("DFA2 transition: Start -> A")); // DEBUG
             return TokenProgress::Steady;
           }
-          // B condition
           if (token == Alphabet::B) {
             currentState = DfaStates::B;
+            Serial.println(F("DFA2 transition: Start -> B")); // DEBUG
             return TokenProgress::Steady;
           }
           halted = true;
+          Serial.println(F("DFA2 halted at Start")); // DEBUG
           return TokenProgress::Halt;
 
-        // Current state is A, valid input is either 1 or 2.
-
-        // ! Current implementation only looking for exact value. Can adjust in future.
         case DfaStates::A:
+          Serial.println(F("DFA2 state: A")); // DEBUG
+
           if (token == Alphabet::ONE && prices[0] == monetaryInput) {
             currentState = DfaStates::A_1;
+            Serial.println(F("DFA2 ACCEPT A_1")); // DEBUG
             return TokenProgress::Accept;
           }
           if (token == Alphabet::TWO && prices[1] == monetaryInput) {
             currentState = DfaStates::A_2;
+            Serial.println(F("DFA2 ACCEPT A_2")); // DEBUG
             return TokenProgress::Accept;
           }
-          // If neither are hit then invalid input.
-          halted = true; 
+          halted = true;
+          Serial.println(F("DFA2 halted at A")); // DEBUG
           return TokenProgress::Halt;
 
-        // Current state is B, valid input is either 1 or 2. 
-
-        // ! Current implementation only looking for exact value. Can adjust in future.
         case DfaStates::B:
+          Serial.println(F("DFA2 state: B")); // DEBUG
+
           if (token == Alphabet::ONE && prices[2] == monetaryInput) {
             currentState = DfaStates::B_1;
+            Serial.println(F("DFA2 ACCEPT B_1")); // DEBUG
             return TokenProgress::Accept;
           }
           if (token == Alphabet::TWO && prices[3] == monetaryInput) {
             currentState = DfaStates::B_2;
+            Serial.println(F("DFA2 ACCEPT B_2")); // DEBUG
             return TokenProgress::Accept;
           }
-          // If neither are hit then invalid input.
           halted = true;
+          Serial.println(F("DFA2 halted at B")); // DEBUG
           return TokenProgress::Halt;
       }
     }
   }
 
+  Serial.println(F("DFA2 fallback HALT")); // DEBUG
   return TokenProgress::Halt;
 }
 
 void VendingDfa2::ResetSubsystem() {
+
+  Serial.println(F("DFA2 reset subsystem")); // DEBUG
+
   currentState = DfaStates::Start;
   halted = false;
   monetaryTokenLock = false;

@@ -1,9 +1,10 @@
-
 #include <Arduino.h>
 #include "Model.h"
 #include "Controller.h"
 #include "View.h"
 #include "Enums.h"
+#include "Pins.h"
+
 
 // Declarations
 void distribute(Alphabet token);
@@ -28,22 +29,33 @@ const unsigned long INPUT_TIMEOUT = 60000; // 60 seconds
 void setup() {
   Serial.begin(9600);
 
-  pinMode(2, OUTPUT);
-  pinMode(3, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
-  pinMode(6, OUTPUT);
-  pinMode(7, OUTPUT);
+  pinMode(D1_AIN1, OUTPUT);
+  pinMode(D1_BIN1, OUTPUT);
+  pinMode(D1_STBY, OUTPUT);
 
+  pinMode(D2_AIN1, OUTPUT);
+  pinMode(D2_BIN1, OUTPUT);
+  pinMode(D2_STBY, OUTPUT);
+
+  // Start with everything off
+  digitalWrite(D1_AIN1, LOW);
+  digitalWrite(D1_BIN1, LOW);
+  digitalWrite(D1_STBY, LOW);
+
+  digitalWrite(D2_AIN1, LOW);
+  digitalWrite(D2_BIN1, LOW);
+  digitalWrite(D2_STBY, LOW);
 }
 
 void loop() {
- 
 
   // Listen for hardware inputs.
   Alphabet token = VendingController.ReadInput();
 
   if (token != Alphabet::None) {
+
+        Serial.print(F("Input token received: ")); // DEBUG
+        Serial.println((int)token);                 // DEBUG
 
         // update last interaction time
         lastInputTime = millis();
@@ -51,21 +63,20 @@ void loop() {
         // Call helper function
         distribute(token);
     }
+
   // If amount of time elapsed is greater than a minute since last token recieve - reset model - return input coins - notify view
-  if(millis() - lastInputTime > INPUT_TIMEOUT) {
+  // if (millis() - lastInputTime > INPUT_TIMEOUT) {
 
-    // Reset models subsystems
-    VendingModel.Reset();
+  //   Serial.println(F("Input timeout reached, resetting system")); // DEBUG
 
-    // Notify controller
-    VendingController.HandleResult(Dispense::Reset);
+  //   // Reset models subsystems
+  //   VendingModel.Reset();
+
+  //   // Notify controller
+  //   VendingController.HandleResult(Dispense::Reset);
     
-    // Print to view
-    
-
-  }
-
-
+  //   // Print to view
+  // }
 }
 
 
@@ -75,22 +86,23 @@ void distribute(Alphabet token) {
   // Send token into the model’s DFA system
   Dispense result = VendingModel.AcceptToken(token);
 
+  Serial.print(F("Model returned Dispense result: ")); // DEBUG
+  Serial.println((int)result);                          // DEBUG
+
   // Direct which output goes to which MVC subsystem
 
   // Controller - expecting input ItemOne, ItemTwo, ItemThree, ItemFour, and Reset, pass over on Processing.
   if (result == Dispense::ItemOne ||
-    result == Dispense::ItemTwo ||
-    result == Dispense::ItemThree ||
-    result == Dispense::ItemFour ||
-    result == Dispense::Reset) {
+      result == Dispense::ItemTwo ||
+      result == Dispense::ItemThree ||
+      result == Dispense::ItemFour ||
+      result == Dispense::Reset) {
 
-  VendingController.HandleResult(result);
+    Serial.println(F("Controller handling result")); // DEBUG
+    VendingController.HandleResult(result);
   }
 
   // View - expecting each Dispense result at input
-  
-
- 
 }
 
 

@@ -1,12 +1,15 @@
 #include "Controller.h"
 #include <Arduino.h>
+#include "Pins.h"
 
 
 Controller::Controller() {
-
 }
 
 void Controller::HandleResult(Dispense result) {
+
+    Serial.print(F("Controller received result: ")); // DEBUG
+    Serial.println((int)result);                      // DEBUG
 
     // Will activate digital pins corresponding to which motor is attached to which item.
     // Will also activate digital pins corresponding to electromagnets leading to individual coin collection chambers.
@@ -19,120 +22,89 @@ void Controller::HandleResult(Dispense result) {
     switch (result) {
 
         case Dispense::ItemOne:
+            Serial.println(F("Controller: Dispense ItemOne"));
 
-            // Motor logic for ItemOne
+            digitalWrite(D1_STBY, HIGH);
+            digitalWrite(D1_AIN1, HIGH);
 
-            // STBY HIGH
-            digitalWrite(3, HIGH); // STBY
-            // Direction pins set
-            digitalWrite(2, HIGH); // AIN1 (direction)
-            digitalWrite(4, LOW);  // BIN1 or paired pin LOW
+            delay(3000);
 
-            // delay(time_for_vend);
-
-            // STBY Low
-            digitalWrite(3, LOW);
-
-            // AIN1 direction pin low
-            digitalWrite(2, LOW);
-
-            // Electro magnet component -
-            
-
+            digitalWrite(D1_AIN1, LOW);
+            digitalWrite(D1_STBY, LOW);
             break;
 
-        case Dispense:: ItemTwo:
-            // Motor logic for ItemTwo
-            // STBY HIGH
-            digitalWrite(3, HIGH); // STBY
-            // Direction pins set
-            digitalWrite(4,HIGH); // BIN1 set to rotate
-            digitalWrite(2, LOW); // AIN1 set to stop
+        case Dispense::ItemTwo:
+            Serial.println(F("Controller: Dispense ItemTwo"));
 
-            // delay(time_for_vend);
+            digitalWrite(D1_STBY, HIGH);
+            digitalWrite(D1_BIN1, HIGH);
 
-            // STBY Low
-            digitalWrite(3,LOW);
+            delay(3000);
 
-            // BIN1 direction pin low
-            digitalWrite(4,LOW);
-
-            // Electro magnet component -
-
-
+            digitalWrite(D1_BIN1, LOW);
+            digitalWrite(D1_STBY, LOW);
             break;
 
-        case Dispense:: ItemThree:
+        case Dispense::ItemThree:
+            Serial.println(F("Controller: Dispense ItemThree"));
 
-            // Motor logic for ItemThree
+            digitalWrite(D2_STBY, HIGH);
+            digitalWrite(D2_AIN1, HIGH);
 
-            // STBY HIGH
-            digitalWrite(6, HIGH); // STBY
-            // Direction pins set
-            digitalWrite(5, HIGH); // AIN1 (direction)
-            digitalWrite(7, LOW);  // BIN1 or paired pin LOW
+            delay(3000);
 
-            // delay(time_for_vend);
-
-            // STBY Low
-            digitalWrite(6, LOW);
-
-            // AIN1 direction pin low
-            digitalWrite(5, LOW);
-
-            // Electro magnet component -
-
+            digitalWrite(D2_AIN1, LOW);
+            digitalWrite(D2_STBY, LOW);
             break;
 
-        case Dispense:: ItemFour:
+        case Dispense::ItemFour:
+            Serial.println(F("Controller: Dispense ItemFour"));
 
-            // Motor logic for ItemFour
+            digitalWrite(D2_STBY, HIGH);
+            digitalWrite(D2_BIN1, HIGH);
 
-            // STBY HIGH
-            digitalWrite(6, HIGH); // STBY
-            // Direction pins set
-            digitalWrite(7, HIGH); // BIN1 set to rotate
-            digitalWrite(5, LOW);  // AIN1 set to stop
+            delay(3000);
 
-            // delay(time_for_vend);
-
-            // STBY Low
-            digitalWrite(6, LOW);
-
-            // BIN1 direction pin low
-            digitalWrite(7, LOW);
-
-            // Electro magnet component -
-
+            digitalWrite(D2_BIN1, LOW);
+            digitalWrite(D2_STBY, LOW);
             break;
-        
-        case Dispense:: Reset:
 
+        case Dispense::Reset:
+            Serial.println(F("Controller: Reset"));
 
-            // Disable motors / reset state
-            // STBY LOW, PWM LOW, direction pins LOW
+            digitalWrite(D1_AIN1, LOW);
+            digitalWrite(D1_BIN1, LOW);
+            digitalWrite(D1_STBY, LOW);
+
+            digitalWrite(D2_AIN1, LOW);
+            digitalWrite(D2_BIN1, LOW);
+            digitalWrite(D2_STBY, LOW);
             break;
+    }
+
 
 }
-
-
-  
-}
-
 
 
 // Serial.available interacts with tokens currently added to the abstracted buffer, !Read Can only pull off one charecter at once!
 Alphabet Controller::ReadInput() {
-    // 
+
     if (Serial.available() > 0) {
 
         char incoming = Serial.read();
 
-        // Convert a single typed char into an Alphabet token
-        return ConvertSerialChar(incoming);
+        Serial.print(F("Raw serial input: ")); // DEBUG
+        Serial.println(incoming);              // DEBUG
+
+        Alphabet token = ConvertSerialChar(incoming);
+
+        Serial.print(F("Converted token: "));  // DEBUG
+        Serial.println((int)token);             // DEBUG
+
+        return token;
     }
 
-    return Alphabet::None; // nothing received
+    return Alphabet::None;
 }
 
 
@@ -148,7 +120,5 @@ Alphabet Controller::ConvertSerialChar(char c) {
         default:  return Alphabet::None;
     }
 }
-
-
 
 

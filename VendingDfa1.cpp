@@ -1,188 +1,194 @@
 #include "VendingDfa1.h"
+#include <Arduino.h>
 
 VendingDfa1::VendingDfa1(int (&modelPrices)[4])
-    : prices(modelPrices)   // bind reference here
+    : prices(modelPrices)
 {
-    currentState = DfaStates::Start;   // constructor code
+    currentState = DfaStates::Start;
+    Serial.println(F("DFA1 initialized")); // DEBUG
 }
 
 TokenProgress VendingDfa1::ProgressState(Alphabet token) {
 
-  // Make distinction of what branch is next by what the current state is.
+  Serial.print(F("DFA1 received token: ")); // DEBUG
+  Serial.println((int)token);               // DEBUG
 
-  // If every single state has a transition with R, leading to an accept state, then at any input token of R:
-  // reset the current state and variables maintaining that current state.
-  if(token == Alphabet::R){
+  if (token == Alphabet::R) {
+    Serial.println(F("DFA1: Reset token received")); // DEBUG
     return TokenProgress::Reset;
-
   }
 
-  if(!halted){
-  // Decision tree dependent on what the currentState is.
-  switch(currentState){
+  if (!halted) {
+    switch (currentState) {
 
-    // Start state case, branch can either accept A or B. Only reachable when current state is Start. 
-    case DfaStates::Start:
-      // A condition
-      if(token == Alphabet::A){
-        currentState = DfaStates::A;
-        return TokenProgress::Steady;
-      }
-      // B condition
-      if(token == Alphabet::B){
-        currentState = DfaStates::B;
-        return TokenProgress::Steady;
-      }
-      halted = true;
-      return TokenProgress::Halt;
+      case DfaStates::Start:
+        Serial.println(F("DFA1 state: Start")); // DEBUG
 
-    // Current state is A, valid input is either 1 or 2. 
-    case DfaStates::A:
-      if(token == Alphabet::ONE){
-        currentState = DfaStates:: A_1;
-        return TokenProgress::Steady;
-      }
-      if(token == Alphabet::TWO){
-        currentState = DfaStates::A_2;
-        return TokenProgress::Steady;
-      }
-      halted = true;
-      return TokenProgress::Halt;
+        if (token == Alphabet::A) {
+          currentState = DfaStates::A;
+          Serial.println(F("DFA1 transition: Start -> A")); // DEBUG
+          return TokenProgress::Steady;
+        }
+        if (token == Alphabet::B) {
+          currentState = DfaStates::B;
+          Serial.println(F("DFA1 transition: Start -> B")); // DEBUG
+          return TokenProgress::Steady;
+        }
+        halted = true;
+        Serial.println(F("DFA1 halted at Start")); // DEBUG
+        return TokenProgress::Halt;
 
+      case DfaStates::A:
+        Serial.println(F("DFA1 state: A")); // DEBUG
 
-    // Current state is B, valid input is either 1 or 2. 
-    case DfaStates::B:
-      if (token == Alphabet::ONE) {
-        currentState = DfaStates::B_1;
-        return TokenProgress::Steady;
-      }
-      if (token == Alphabet::TWO) {
-        currentState = DfaStates::B_2;
-        return TokenProgress::Steady;
-      }
-      // If neither are hit then invalid input.
-      halted = true;
-      return TokenProgress::Halt;
+        if (token == Alphabet::ONE) {
+          currentState = DfaStates::A_1;
+          Serial.println(F("DFA1 transition: A -> A_1")); // DEBUG
+          return TokenProgress::Steady;
+        }
+        if (token == Alphabet::TWO) {
+          currentState = DfaStates::A_2;
+          Serial.println(F("DFA1 transition: A -> A_2")); // DEBUG
+          return TokenProgress::Steady;
+        }
+        halted = true;
+        Serial.println(F("DFA1 halted at A")); // DEBUG
+        return TokenProgress::Halt;
 
-    // State to begin acceping money, abstract further states and explicit transitions by just
-    // maintaining a variable that keeps track of price which decrements per token insertion.
-    
-    case DfaStates::A_1:
+      case DfaStates::B:
+        Serial.println(F("DFA1 state: B")); // DEBUG
 
-      if(token == Alphabet::TWENTY_FIVE){
-        // First pass check, initialize itemCost to index in array representing price of A1
-        if(itemCost == -1){
-          itemCost = prices[0];
+        if (token == Alphabet::ONE) {
+          currentState = DfaStates::B_1;
+          Serial.println(F("DFA1 transition: B -> B_1")); // DEBUG
+          return TokenProgress::Steady;
+        }
+        if (token == Alphabet::TWO) {
+          currentState = DfaStates::B_2;
+          Serial.println(F("DFA1 transition: B -> B_2")); // DEBUG
+          return TokenProgress::Steady;
+        }
+        halted = true;
+        Serial.println(F("DFA1 halted at B")); // DEBUG
+        return TokenProgress::Halt;
+
+      case DfaStates::A_1:
+        Serial.println(F("DFA1 state: A_1")); // DEBUG
+
+        if (token == Alphabet::TWENTY_FIVE) {
+          if (itemCost == -1) {
+            itemCost = prices[0];
+            Serial.print(F("DFA1 A_1 price initialized: "));
+            Serial.println(itemCost);
+          }
+
+          itemCost -= 25;
+          Serial.print(F("DFA1 A_1 remaining cost: "));
+          Serial.println(itemCost);
+
+          if (itemCost == 0) {
+            Serial.println(F("DFA1 A_1 ACCEPT")); // DEBUG
+            return TokenProgress::Accept;
+          }
+          return TokenProgress::Steady;
         }
 
-        // Tracking current state.
-        itemCost = itemCost - 25;
+        halted = true;
+        Serial.println(F("DFA1 halted at A_1")); // DEBUG
+        return TokenProgress::Halt;
 
+      case DfaStates::A_2:
+        Serial.println(F("DFA1 state: A_2")); // DEBUG
 
-        if(itemCost == 0){
+        if (token == Alphabet::TWENTY_FIVE) {
+          if (itemCost == -1) {
+            itemCost = prices[1];
+            Serial.print(F("DFA1 A_2 price initialized: "));
+            Serial.println(itemCost);
+          }
 
-          return TokenProgress::Accept;
+          itemCost -= 25;
+          Serial.print(F("DFA1 A_2 remaining cost: "));
+          Serial.println(itemCost);
+
+          if (itemCost == 0) {
+            Serial.println(F("DFA1 A_2 ACCEPT")); // DEBUG
+            return TokenProgress::Accept;
+          }
+          return TokenProgress::Steady;
         }
 
-        return TokenProgress::Steady;
-      }
+        halted = true;
+        Serial.println(F("DFA1 halted at A_2")); // DEBUG
+        return TokenProgress::Halt;
 
-      halted = true;
-      return TokenProgress::Halt;
+      case DfaStates::B_1:
+        Serial.println(F("DFA1 state: B_1")); // DEBUG
 
-    // Output for item A2
-    case DfaStates::A_2:
+        if (token == Alphabet::TWENTY_FIVE) {
+          if (itemCost == -1) {
+            itemCost = prices[2];
+            Serial.print(F("DFA1 B_1 price initialized: "));
+            Serial.println(itemCost);
+          }
 
-      if(token == Alphabet::TWENTY_FIVE){
-        if (itemCost == -1) {
-          itemCost = prices[1];
+          itemCost -= 25;
+          Serial.print(F("DFA1 B_1 remaining cost: "));
+          Serial.println(itemCost);
+
+          if (itemCost == 0) {
+            Serial.println(F("DFA1 B_1 ACCEPT")); // DEBUG
+            return TokenProgress::Accept;
+          }
+          return TokenProgress::Steady;
         }
 
-        itemCost -= 25;  // same concept as above
+        halted = true;
+        Serial.println(F("DFA1 halted at B_1")); // DEBUG
+        return TokenProgress::Halt;
 
-        if (itemCost == 0) {
+      case DfaStates::B_2:
+        Serial.println(F("DFA1 state: B_2")); // DEBUG
 
-          return TokenProgress::Accept;
+        if (token == Alphabet::TWENTY_FIVE) {
+          if (itemCost == -1) {
+            itemCost = prices[3];
+            Serial.print(F("DFA1 B_2 price initialized: "));
+            Serial.println(itemCost);
+          }
+
+          itemCost -= 25;
+          Serial.print(F("DFA1 B_2 remaining cost: "));
+          Serial.println(itemCost);
+
+          if (itemCost == 0) {
+            Serial.println(F("DFA1 B_2 ACCEPT")); // DEBUG
+            return TokenProgress::Accept;
+          }
+          return TokenProgress::Steady;
         }
 
-        return TokenProgress::Steady;
-      }
-
-      halted = true;
-      return TokenProgress::Halt;
-
-    // State to begin acceping money, abstract further states and explicit transitions by just
-    // maintaining a variable that keeps track of price which decrements per token insertion.
-    case DfaStates::B_1:
-
-      if(token == Alphabet :: TWENTY_FIVE){
-      // First pass check, initialize itemCost to index in array representing price of B1
-        if (itemCost == -1) {
-          itemCost = prices[2];
-        }
-
-        // Tracking current state.
-        itemCost = itemCost - 25;
-
-        // *FUTURE, for now just accept exact input operating on cents.
-        // If statement represents a transition leading into an accept state.
-        if (itemCost == 0) {
-
-        
-          return TokenProgress::Accept;
-          
-        }
-        return TokenProgress::Steady;
-      }
-      halted = true;
-      return TokenProgress::Halt;
-    
-    // State to begin acceping money, abstract further states and explicit transitions by just
-    // maintaining a variable that keeps track of price which decrements per token insertion.
-    case DfaStates::B_2:
-
-      if(token == Alphabet :: TWENTY_FIVE){
-
-        // First pass check, initialize itemCost to index in array representing price of B2
-        if (itemCost == -1) {
-          itemCost = prices[3];
-        }
-
-        // Tracking current state.
-        itemCost = itemCost - 25;
-
-        // *FUTURE, for now just accept exact input operating on cents.
-        // If statement represents a transition leading into an accept state.
-        if (itemCost == 0) {
-
-          return TokenProgress::Accept;
-        }
-
-        return TokenProgress::Steady;
-
-      }
-      halted = true;
-      return TokenProgress::Halt;
-
+        halted = true;
+        Serial.println(F("DFA1 halted at B_2")); // DEBUG
+        return TokenProgress::Halt;
+    }
   }
-    
-  }
-    return TokenProgress::Halt;
+
+  Serial.println(F("DFA1 fallback HALT")); // DEBUG
+  return TokenProgress::Halt;
 }
 
+void VendingDfa1::ResetSubsystem() {
 
-void VendingDfa1::ResetSubsystem(){
+  Serial.println(F("DFA1 reset subsystem")); // DEBUG
 
   currentState = DfaStates::Start;
   itemCost = -1;
   halted = false;
-
 }
 
-DfaStates VendingDfa1 :: CurrentState(){
-
+DfaStates VendingDfa1::CurrentState() {
   return currentState;
 }
-
 
 
