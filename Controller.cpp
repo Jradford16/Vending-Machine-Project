@@ -2,8 +2,23 @@
 #include <Arduino.h>
 #include "Pins.h"
 
+// Servo tuning
+constexpr int SERVO_ACCEPT_POS  = 30;
+constexpr int SERVO_REJECT_POS  = 150;
+constexpr int SERVO_NEUTRAL_POS = 90;
+
 
 Controller::Controller() {
+    lastBtn1 = HIGH;
+    lastBtn2 = HIGH;
+    lastBtn3 = HIGH;
+    lastBtn4 = HIGH;
+    lastBtn5 = HIGH;
+}
+
+void Controller::begin() {
+  tokenServo.attach(SERVO_TOKEN_ROUTE);
+  tokenServo.write(SERVO_NEUTRAL_POS);
 }
 
 void Controller::HandleResult(Dispense result) {
@@ -82,30 +97,88 @@ void Controller::HandleResult(Dispense result) {
             break;
     }
 
-
 }
+
+void Controller::RouteTokenAccept() {
+  tokenServo.write(SERVO_ACCEPT_POS);
+}
+
+void Controller::RouteTokenReject() {
+  tokenServo.write(SERVO_REJECT_POS);
+}
+
+void Controller::RouteTokenNeutral() {
+  tokenServo.write(SERVO_NEUTRAL_POS);
+}
+
+
 
 
 // Serial.available interacts with tokens currently added to the abstracted buffer, !Read Can only pull off one charecter at once!
 Alphabet Controller::ReadInput() {
 
+    // --- SERIAL INPUT (debug / testing) ---
     if (Serial.available() > 0) {
 
         char incoming = Serial.read();
 
-        Serial.print(F("Raw serial input: ")); // DEBUG
-        Serial.println(incoming);              // DEBUG
+        Serial.print(F("[SERIAL] Raw input: "));
+        Serial.println(incoming);
 
         Alphabet token = ConvertSerialChar(incoming);
 
-        Serial.print(F("Converted token: "));  // DEBUG
-        Serial.println((int)token);             // DEBUG
+        Serial.print(F("[SERIAL] Converted token: "));
+        Serial.println((int)token);
 
         return token;
     }
 
+    // --- BUTTON INPUTS (edge-detected, active LOW) ---
+    bool currBtn1 = digitalRead(BTN_1);
+    bool currBtn2 = digitalRead(BTN_2);
+    bool currBtn3 = digitalRead(BTN_3);
+    bool currBtn4 = digitalRead(BTN_4);
+    bool currBtn5 = digitalRead(BTN_5);
+
+    if (lastBtn1 == HIGH && currBtn1 == LOW) {
+        Serial.println(F("[BTN_1] Press -> Alphabet::A"));
+        lastBtn1 = currBtn1;
+        return Alphabet::A;
+    }
+    if (lastBtn2 == HIGH && currBtn2 == LOW) {
+        Serial.println(F("[BTN_2] Press -> Alphabet::B"));
+        lastBtn2 = currBtn2;
+        return Alphabet::B;
+    }
+    if (lastBtn3 == HIGH && currBtn3 == LOW) {
+        Serial.println(F("[BTN_3] Press -> Alphabet::ONE"));
+        lastBtn3 = currBtn3;
+        return Alphabet::ONE;
+    }
+    if (lastBtn4 == HIGH && currBtn4 == LOW) {
+        Serial.println(F("[BTN_4] Press -> Alphabet::TWO"));
+        lastBtn4 = currBtn4;
+        return Alphabet::TWO;
+    }
+    if (lastBtn5 == HIGH && currBtn5 == LOW) {
+        Serial.println(F("[BTN_5] Press -> Alphabet::R"));
+        lastBtn5 = currBtn5;
+        return Alphabet::R;
+    }
+
+    // update last states (no event)
+    lastBtn1 = currBtn1;
+    lastBtn2 = currBtn2;
+    lastBtn3 = currBtn3;
+    lastBtn4 = currBtn4;
+    lastBtn5 = currBtn5;
+
     return Alphabet::None;
 }
+
+
+
+
 
 
 Alphabet Controller::ConvertSerialChar(char c) {

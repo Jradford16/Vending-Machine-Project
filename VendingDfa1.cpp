@@ -178,6 +178,8 @@ TokenProgress VendingDfa1::ProgressState(Alphabet token) {
   return TokenProgress::Halt;
 }
 
+
+
 void VendingDfa1::ResetSubsystem() {
 
   Serial.println(F("DFA1 reset subsystem")); // DEBUG

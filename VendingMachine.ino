@@ -28,7 +28,12 @@ const unsigned long INPUT_TIMEOUT = 60000; // 60 seconds
 
 void setup() {
   Serial.begin(9600);
+  delay(100);
+  Serial.println("SETUP START");
+  VendingView.begin();
+  Serial.println("VIEW READY");
 
+  // PinModes for headers to Motor Driver 1 and Motor Driver 2
   pinMode(D1_AIN1, OUTPUT);
   pinMode(D1_BIN1, OUTPUT);
   pinMode(D1_STBY, OUTPUT);
@@ -37,7 +42,7 @@ void setup() {
   pinMode(D2_BIN1, OUTPUT);
   pinMode(D2_STBY, OUTPUT);
 
-  // Start with everything off
+  // Start with everything off on both motor drivers
   digitalWrite(D1_AIN1, LOW);
   digitalWrite(D1_BIN1, LOW);
   digitalWrite(D1_STBY, LOW);
@@ -45,64 +50,86 @@ void setup() {
   digitalWrite(D2_AIN1, LOW);
   digitalWrite(D2_BIN1, LOW);
   digitalWrite(D2_STBY, LOW);
+
+  // Initialize buttons with internal pull up resistors - Buttons correlate to each alphabet value. 
+  pinMode(BTN_1, INPUT_PULLUP);
+  pinMode(BTN_2, INPUT_PULLUP);
+  pinMode(BTN_3, INPUT_PULLUP);
+  pinMode(BTN_4, INPUT_PULLUP);
+  pinMode(BTN_5, INPUT_PULLUP);
+  
 }
 
 void loop() {
-
-  // Listen for hardware inputs.
   Alphabet token = VendingController.ReadInput();
 
+  // Debug only when something meaningful happens
   if (token != Alphabet::None) {
+    Serial.print(F("Input token received: "));
+    Serial.println((int)token);
+  }
 
-        Serial.print(F("Input token received: ")); // DEBUG
-        Serial.println((int)token);                 // DEBUG
-
-        // update last interaction time
-        lastInputTime = millis();
-
-        // Call helper function
-        distribute(token);
-    }
-
-  // If amount of time elapsed is greater than a minute since last token recieve - reset model - return input coins - notify view
-  // if (millis() - lastInputTime > INPUT_TIMEOUT) {
-
-  //   Serial.println(F("Input timeout reached, resetting system")); // DEBUG
-
-  //   // Reset models subsystems
-  //   VendingModel.Reset();
-
-  //   // Notify controller
-  //   VendingController.HandleResult(Dispense::Reset);
-    
-  //   // Print to view
-  // }
+  // ALWAYS distribute — View needs None for edge reset
+  distribute(token);
 }
 
 
 // Helper method to distribute token result token to the appropirate subsystem
+
+// TEMP PATCH:
+// Alphabet::None is filtered from the Model for now.
+// The View still receives None to detect falling edges.
+// TODO (cleanup): move edge detection into the Controller
+// or teach the Model to explicitly handle None.
 void distribute(Alphabet token) {
-  
-  // Send token into the model’s DFA system
-  Dispense result = VendingModel.AcceptToken(token);
 
-  Serial.print(F("Model returned Dispense result: ")); // DEBUG
-  Serial.println((int)result);                          // DEBUG
+  static Dispense lastResult = Dispense::None;
+  Dispense result = lastResult;
 
-  // Direct which output goes to which MVC subsystem
+  // Only feed the DFA on real tokens
+  if (token != Alphabet::None) {
+    result = VendingModel.AcceptToken(token);
+    lastResult = result;
 
-  // Controller - expecting input ItemOne, ItemTwo, ItemThree, ItemFour, and Reset, pass over on Processing.
+    Serial.print(F("Model returned Dispense result: "));
+    Serial.println((int)result);
+  }
+
+  // View ALWAYS runs (needs falling edge info)
+  VendingView.drawUI(result, token);
+
+  // Controller only reacts to terminal actions
   if (result == Dispense::ItemOne ||
       result == Dispense::ItemTwo ||
       result == Dispense::ItemThree ||
       result == Dispense::ItemFour ||
       result == Dispense::Reset) {
 
-    Serial.println(F("Controller handling result")); // DEBUG
-    VendingController.HandleResult(result);
+
+    // Route BEFORE dispensing / message
+  if (result == Dispense::Reset) {
+    VendingController.RouteTokenReject();
+  } else {
+    VendingController.RouteTokenAccept();
   }
 
-  // View - expecting each Dispense result at input
+  // Activate motors / physical dispense
+  VendingController.HandleResult(result);
+
+  // Blocking UX message
+  if (result == Dispense::Reset) {
+    VendingView.showMessage("Resetting...", 1500);
+  } else {
+    VendingView.showMessage("Enjoy!", 1500);
+  }
+
+  // Return servo to default position
+  VendingController.RouteTokenNeutral();
+
+  // Prevent repeated firing
+  lastResult = Dispense::None;
+  }
 }
+
 
 

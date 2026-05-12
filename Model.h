@@ -23,6 +23,8 @@ public:
 
     void Reset(); 
 
+    
+
 private:
 
     VendingDfa1 Dfa1;
